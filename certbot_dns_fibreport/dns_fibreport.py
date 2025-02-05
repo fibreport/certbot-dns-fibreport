@@ -60,9 +60,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         )
 
     def _perform(self, domain: str, validation_name: str, validation: str) -> None:
-        self._get_api_client().add_txt_record(
-            domain, validation_name, validation, self.ttl
-        )
+        self._get_api_client().add_txt_record(domain, validation_name, validation, self.ttl)
 
     def _cleanup(self, domain: str, validation_name: str, validation: str) -> None:
         self._get_api_client().del_txt_record(domain, validation_name, validation)
@@ -82,9 +80,7 @@ class _DNSAPIClient:
         self.api_key = api_key
         self.api_endpoint = api_endpoint
 
-    def add_txt_record(
-        self, domain: str, record_name: str, record_content: str, record_ttl
-    ) -> None:
+    def add_txt_record(self, domain: str, record_name: str, record_content: str, record_ttl) -> None:
         # get project and zone UUID
         _, project_uuid, zone_uuid = self._find_zone(domain)
 
@@ -100,9 +96,7 @@ class _DNSAPIClient:
             },
         )
 
-    def del_txt_record(
-        self, domain: str, record_name: str, record_content: str
-    ) -> None:
+    def del_txt_record(self, domain: str, record_name: str, record_content: str) -> None:
         # get project and zone UUID
         _, project_uuid, zone_uuid = self._find_zone(domain)
 
@@ -137,9 +131,7 @@ class _DNSAPIClient:
                 if response["count"] == 1:
                     return team["uuid"], project["uuid"], response["results"][0]["uuid"]
 
-        raise errors.PluginError(
-            "Unable to find DNS zone. Please verify that the DNS zone exists or check your API key permissions."
-        )
+        raise errors.PluginError("Unable to find DNS zone. Please verify that the DNS zone exists or check your API key permissions.")
 
     def _find_zone_record(
         self, project_uuid: str, zone_uuid: str, record_name: str, record_content
@@ -154,9 +146,7 @@ class _DNSAPIClient:
             if zone_record["content"] == record_content:
                 return zone_record["uuid"]
 
-        raise errors.PluginError(
-            "Unable to find TXT record in DNS zone. Please verify that the TXT record exists or check your API key permissions."
-        )
+        raise errors.PluginError("Unable to find TXT record in DNS zone. Please verify that the TXT record exists or check your API key permissions.")
 
     def _api_request(
         self,
@@ -222,8 +212,6 @@ class _DNSAPIClient:
         )
 
         if request.status_code == 403:
-            raise errors.PluginError(
-                "Authentication error. Please verify that your API key is valid and correct permissions are assigned."
-            )
+            raise errors.PluginError("Authentication error. Please verify that your API key is valid and correct permissions are assigned.")
 
         return request.json()

@@ -118,6 +118,9 @@ class _DNSAPIClient:
         )
 
     def _find_zone(self, domain: str) -> Tuple[str, str, str]:
+        # remove any subdomain prefix
+        domain = '.'.join(domain.split(".")[-2:])
+
         # iterate through each team
         for team in self._api_request(url="/v1/teams/", method="GET"):
             # iterate through each project

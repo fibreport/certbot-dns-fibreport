@@ -1,7 +1,9 @@
+import os
+
 from setuptools import find_packages
 from setuptools import setup
 
-version = "1.0.0"
+version = os.getenv("CI_COMMIT_TAG", "1.0.0")
 
 install_requires = [
     "acme>=3.1.0",

@@ -1,13 +1,17 @@
 import os
 
+from packaging.version import Version
 from setuptools import find_packages
 from setuptools import setup
 
-version = os.environ["CI_COMMIT_TAG"]
+version_string = os.getenv("CI_COMMIT_TAG", "0.0.0.dev0")
+version = Version(version_string)
 
 install_requires = [
     "acme>=3.1.0",
     "certbot>=3.1.0",
+    "setuptools",
+    "packaging",
     "requests",
 ]
 
@@ -22,7 +26,7 @@ test_extras = [
 
 setup(
     name="certbot-dns-fibreport",
-    version=version,
+    version=str(version),
     description="fibreport.com DNS Authenticator plugin for Certbot",
     url="https://github.com/fibreport/certbot-dns-fibreport",
     author="fibreport UG (haftungsbeschränkt)",

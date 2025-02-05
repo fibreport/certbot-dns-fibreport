@@ -4,7 +4,7 @@ release:
     - tags
   script:
     - pip install build twine wheel setuptools
-    - python setup.py sdist bdist_wheel
+    - python setup.py sdist
     - export TWINE_USERNAME=gitlab-ci-token
     - export TWINE_PASSWORD=${CI_JOB_TOKEN}
     - twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*

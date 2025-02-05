@@ -210,10 +210,17 @@ class _DNSAPIClient:
         request_session.mount("https://", HTTPAdapter(max_retries=request_retries))
 
         # send the request
-        return getattr(request_session, method.lower())(
+        request = getattr(request_session, method.lower())(
             url=url,
             params=query_parameters,
             json=data_json,
             headers=headers,
             timeout=timeout,
-        ).json()
+        )
+
+        if request.status_code == 403:
+            raise errors.PluginError(
+                "Authentication error. Please verify that your API key is valid and correct permissions are assigned."
+            )
+
+        return request.json()

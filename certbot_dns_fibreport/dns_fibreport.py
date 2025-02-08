@@ -38,6 +38,11 @@ class Authenticator(dns_common.DNSAuthenticator):
         if not credentials.conf("api-key"):
             raise errors.PluginError("{}: dns_fibreport_api_key is required.".format(credentials.confobj.filename))
 
+        if credentials.conf("team-uuid") and credentials.conf("project-uuid"):
+            raise errors.PluginError(
+                "{}: dns_fibreport_team_uuid and dns_fibreport_project_uuid can't be set at the same time.".format(credentials.confobj.filename)
+            )
+
     def _setup_credentials(self) -> None:
         self.credentials = self._configure_credentials(
             "credentials",
@@ -115,8 +120,8 @@ class _DNSAPIClient:
         # remove any subdomain prefix
         domain = ".".join(domain.split(".")[-2:])
 
-        # if team and project is pre-filled
-        if self.team_uuid and self.project_uuid:
+        # project is pre-filled
+        if self.project_uuid and not self.team_uuid:
             # search for the DNS zone
             response = self._api_request(
                 url=f"/v1/projects/{self.project_uuid}/services/dns/zones/",

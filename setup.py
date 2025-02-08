@@ -1,7 +1,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-version = "0.0.8"
+version = "0.0.9"
 
 install_requires = [
     "acme>=3.1.0",
@@ -55,10 +55,6 @@ setup(
         "docs": docs_extras,
         "test": test_extras,
     },
-    entry_points={
-        "certbot.plugins": [
-            "dns-fibreport = certbot_dns_fibreport.dns_fibreport:Authenticator"
-        ]
-    },
+    entry_points={"certbot.plugins": ["dns-fibreport = certbot_dns_fibreport.dns_fibreport:Authenticator"]},
     test_suite="certbot_dns_fibreport",
 )

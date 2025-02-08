@@ -1,5 +1,4 @@
 name: certbot-dns-fibreport
-version: git
 summary: Certbot DNS Plugin for fibreport.com
 description: |
   certbot-dns-fibreport is a plugin for Certbot to perform dns-01

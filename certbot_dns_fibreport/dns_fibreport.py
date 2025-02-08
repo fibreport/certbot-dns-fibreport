@@ -27,9 +27,7 @@ class Authenticator(dns_common.DNSAuthenticator):
         self.credentials: Optional[CredentialsConfiguration] = None
 
     @classmethod
-    def add_parser_arguments(
-        cls, add: Callable[..., None], default_propagation_seconds: int = 30
-    ) -> None:
+    def add_parser_arguments(cls, add: Callable[..., None], default_propagation_seconds: int = 30) -> None:
         super().add_parser_arguments(add, default_propagation_seconds)
         add("credentials", help="fibreport.com credentials INI file.")
 
@@ -37,19 +35,8 @@ class Authenticator(dns_common.DNSAuthenticator):
         return "This plugin configures a DNS TXT record to respond to a dns-01 challenge using the fibreport.com API."
 
     def _validate_credentials(self, credentials: CredentialsConfiguration) -> None:
-        if not credentials.conf("api-endpoint"):
-            raise errors.PluginError(
-                "{}: dns_fibreport_api_endpoint is required.".format(
-                    credentials.confobj.filename
-                )
-            )
-
         if not credentials.conf("api-key"):
-            raise errors.PluginError(
-                "{}: dns_fibreport_api_key is required.".format(
-                    credentials.confobj.filename
-                )
-            )
+            raise errors.PluginError("{}: dns_fibreport_api_key is required.".format(credentials.confobj.filename))
 
     def _setup_credentials(self) -> None:
         self.credentials = self._configure_credentials(
@@ -69,16 +56,31 @@ class Authenticator(dns_common.DNSAuthenticator):
         return _DNSAPIClient(
             api_key=self.credentials.conf("api-key"),
             api_endpoint=self.credentials.conf("api-endpoint"),
+            team_uuid=self.credentials.conf("team-uuid"),
+            project_uuid=self.credentials.conf("project-uuid"),
         )
 
 
 class _DNSAPIClient:
+    api_default_endpoint: str = "https://api.fibreport.com"
     api_endpoint: str = None
     api_key: str = None
 
-    def __init__(self, api_key: str, api_endpoint: str) -> None:
+    team_uuid: str = None
+    project_uuid: str = None
+
+    def __init__(
+        self,
+        api_key: str,
+        api_endpoint: str | None = None,
+        team_uuid: Optional[str] = None,
+        project_uuid: Optional[str] = None,
+    ) -> None:
         self.api_key = api_key
-        self.api_endpoint = api_endpoint
+        self.api_endpoint = api_endpoint or self.api_default_endpoint
+
+        self.team_uuid = team_uuid
+        self.project_uuid = project_uuid
 
     def add_txt_record(self, domain: str, record_name: str, record_content: str, record_ttl) -> None:
         # get project and zone UUID
@@ -101,9 +103,7 @@ class _DNSAPIClient:
         _, project_uuid, zone_uuid = self._find_zone(domain)
 
         # get record UUID
-        record_uuid = self._find_zone_record(
-            project_uuid, zone_uuid, record_name, record_content
-        )
+        record_uuid = self._find_zone_record(project_uuid, zone_uuid, record_name, record_content)
 
         # delete record
         self._api_request(
@@ -113,14 +113,24 @@ class _DNSAPIClient:
 
     def _find_zone(self, domain: str) -> Tuple[str, str, str]:
         # remove any subdomain prefix
-        domain = '.'.join(domain.split(".")[-2:])
+        domain = ".".join(domain.split(".")[-2:])
 
-        # iterate through each team
-        for team in self._api_request(url="/v1/teams/", method="GET"):
+        # if team and project is pre-filled
+        if self.team_uuid and self.project_uuid:
+            # search for the DNS zone
+            response = self._api_request(
+                url=f"/v1/projects/{self.project_uuid}/services/dns/zones/",
+                method="GET",
+                query_parameters={"name": domain},
+            )
+
+            if response["count"] == 1:
+                return self.team_uuid, self.project_uuid, response["results"][0]["uuid"]
+
+        # if team is pre-filled
+        elif self.team_uuid and not self.project_uuid:
             # iterate through each project
-            for project in self._api_request(
-                url=f"/v1/teams/{team['uuid']}/projects/", method="GET"
-            ):
+            for project in self._api_request(url=f"/v1/teams/{self.team_uuid}/projects/", method="GET"):
                 # search for the DNS zone
                 response = self._api_request(
                     url=f"/v1/projects/{project['uuid']}/services/dns/zones/",
@@ -129,13 +139,27 @@ class _DNSAPIClient:
                 )
 
                 if response["count"] == 1:
-                    return team["uuid"], project["uuid"], response["results"][0]["uuid"]
+                    return self.team_uuid, project["uuid"], response["results"][0]["uuid"]
+
+        # fallback if no team or project UUIDs are pre-filled
+        else:
+            # iterate through each team
+            for team in self._api_request(url="/v1/teams/", method="GET"):
+                # iterate through each project
+                for project in self._api_request(url=f"/v1/teams/{team['uuid']}/projects/", method="GET"):
+                    # search for the DNS zone
+                    response = self._api_request(
+                        url=f"/v1/projects/{project['uuid']}/services/dns/zones/",
+                        method="GET",
+                        query_parameters={"name": domain},
+                    )
+
+                    if response["count"] == 1:
+                        return team["uuid"], project["uuid"], response["results"][0]["uuid"]
 
         raise errors.PluginError("Unable to find DNS zone. Please verify that the DNS zone exists or check your API key permissions.")
 
-    def _find_zone_record(
-        self, project_uuid: str, zone_uuid: str, record_name: str, record_content
-    ) -> str:
+    def _find_zone_record(self, project_uuid: str, zone_uuid: str, record_name: str, record_content) -> str:
         zone_records = self._api_request(
             url=f"/v1/projects/{project_uuid}/services/dns/zones/{zone_uuid}/records/",
             method="GET",

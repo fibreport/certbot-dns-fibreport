@@ -89,7 +89,7 @@ class _DNSAPIClient:
 
     def add_txt_record(self, domain: str, record_name: str, record_content: str, record_ttl) -> None:
         # get project and zone UUID
-        _, project_uuid, zone_uuid = self._find_zone(domain)
+        project_uuid, zone_uuid = self._find_zone(domain)
 
         # create new TXT record
         self._api_request(
@@ -105,7 +105,7 @@ class _DNSAPIClient:
 
     def del_txt_record(self, domain: str, record_name: str, record_content: str) -> None:
         # get project and zone UUID
-        _, project_uuid, zone_uuid = self._find_zone(domain)
+        project_uuid, zone_uuid = self._find_zone(domain)
 
         # get record UUID
         record_uuid = self._find_zone_record(project_uuid, zone_uuid, record_name, record_content)
@@ -116,7 +116,7 @@ class _DNSAPIClient:
             method="DELETE",
         )
 
-    def _find_zone(self, domain: str) -> Tuple[str, str, str]:
+    def _find_zone(self, domain: str) -> Tuple[str, str]:
         # remove any subdomain prefix
         domain = ".".join(domain.split(".")[-2:])
 
@@ -130,7 +130,7 @@ class _DNSAPIClient:
             )
 
             if response["count"] == 1:
-                return self.team_uuid, self.project_uuid, response["results"][0]["uuid"]
+                return self.project_uuid, response["results"][0]["uuid"]
 
         # if team is pre-filled
         elif self.team_uuid and not self.project_uuid:
@@ -144,7 +144,7 @@ class _DNSAPIClient:
                 )
 
                 if response["count"] == 1:
-                    return self.team_uuid, project["uuid"], response["results"][0]["uuid"]
+                    return project["uuid"], response["results"][0]["uuid"]
 
         # fallback if no team or project UUIDs are pre-filled
         else:
@@ -160,7 +160,7 @@ class _DNSAPIClient:
                     )
 
                     if response["count"] == 1:
-                        return team["uuid"], project["uuid"], response["results"][0]["uuid"]
+                        return project["uuid"], response["results"][0]["uuid"]
 
         raise errors.PluginError("Unable to find DNS zone. Please verify that the DNS zone exists or check your API key permissions.")
 
